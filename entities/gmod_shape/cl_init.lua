@@ -37,7 +37,7 @@ end
 
 
 function ENT:Draw()
-	-- self:DrawMesh() -- Uncomment to draw debug wireframes
+	self:DrawMesh() -- Uncomment to draw debug wireframes
 end
 
 
@@ -53,7 +53,7 @@ end
 function ENT:DrawMesh()
 	if not self.meshTable then
 		if not noTableFlag then
-			print("[ERROR] CLIENT HAS NO MESHTABLE")
+			-- print("[ERROR] CLIENT HAS NO MESHTABLE")
 			noTableFlag = true
 		end return end
 	noTableFlag = false

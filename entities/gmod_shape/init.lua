@@ -7,15 +7,16 @@ Note to the reader: You will notice that this file is commented. While I'd like 
 I did this out of the kindness of my heart, the truth is that Lua is an ugly, terrible language
 and the moment you try to do anything more complex than FizzBuzz, keeping track of what is happening
 becomes impossible. Or maybe I'm just stupid. The comments are your North Star, and you are a musketeer. 
-In this metaphor, I am  baby Jesus and you are trying to bring me gold and blankets. Regardless, the
+In this metaphor, I am baby Jesus and you are trying to bring me gold and blankets. Regardless, the
 comments are the only way through this otherwise impassible landscape. Good luck.
+-Max
 
 TODO
+• Center of Mass
 • Duping
 • Saving
 • Shadows
 • Constraints
-• Center of Mass
 ]]--
 
 
@@ -41,9 +42,9 @@ function ENT:Initialize()
 
 		self:SetModel(modelPath)
 
-		-- Verify that network strings are added, regardless of boot order (client then server or vise-versa)
-		if util.AddNetworkString( "SendPhysMesh" .. self:EntIndex()) then end
-		if util.AddNetworkString( "RequestPhysMesh" .. self:EntIndex()) then end
+		-- Verify that network strings are pooled, regardless of load order (client then server or vise-versa)
+		if util.AddNetworkString( "SendPhysMesh" .. self:EntIndex()) then print() end
+		if util.AddNetworkString( "RequestPhysMesh" .. self:EntIndex()) then print() end
 
 		self:GenerateMeshFromEntities(self.Children)
 
@@ -54,7 +55,7 @@ function ENT:Initialize()
 
 		for _, child in pairs(self.Children) do
 			child:SetParent(self)
-			child:PhysicsDestroy()
+			-- child:PhysicsDestroy()
 		end
 
 		self:SetSolid(SOLID_VPHYSICS)
@@ -90,12 +91,16 @@ end
 	Iterates through objects in self.Children and combines their Physics Meshes into one list of verticies
 	
 	Requires:
-	• Object knows what who its children are
-	• Object has each child's physics object
+	• self.Children
+	• Each child has a valid physics object
 ]]--
 function ENT:GenerateMeshFromEntities()
 	local newMesh = {}
+	print("GENERATING MESH FOR" .. tostring(self))
 	PrintTable(self.Children)
+
+	if not self.Children then print("NO CHILDREN!") end
+
 	-- For each entity in the selected entities list
 	for _, childEnt in pairs(self.Children) do
 		local childPhys = childEnt:GetPhysicsObject()
@@ -167,28 +172,26 @@ end
 	duplication table should be also stored on that prop_physics, not on prop_physics_my. 
 ]]--
 function ENT:PreEntityCopy()
-	print("[STATE] INIT PreEntityCopy");
+	print("[STATE] INIT PreEntityCopy on" .. tostring(self));
 	if CLIENT then return end
 	local info = {}
 
-	info.Children = self.Children
+	info.Children = {}
 
-	-- info.Children = {}
+	for id, ch in pairs(self.Children) do
 
-	-- for id, ch in pairs(self.Children) do
+		local child = {}
+		child.Class = ch:GetClass()
+		child.Model = ch:GetModel()
+		child.Pos = ch:GetPos() - self:GetPos()
+		child.Pos:Rotate(-1 * self:GetAngles())
+		child.Ang = ch:GetAngles() - self:GetAngles()
+		child.Mat = ch:GetMaterial()
+		child.Skin = ch:GetSkin()
 
-	-- 	local child = {}
-	-- 	child.Class = ch:GetClass()
-	-- 	child.Model = ch:GetModel()
-	-- 	child.Pos = ch:GetPos() - self:GetPos()
-	-- 	child.Pos:Rotate(-1 * self:GetAngles())
-	-- 	child.Ang = ch:GetAngles() - self:GetAngles()
-	-- 	child.Mat = ch:GetMaterial()
-	-- 	child.Skin = ch:GetSkin()
+		info.Children[id] = child
 
-	-- 	table.insert(info.Children, child)
-
-	-- end
+	end
 
 	info.Mass = self.Mass
 
@@ -239,41 +242,41 @@ end
 	
 ]]--
 function ENT:PostEntityPaste(ply, ent, createdEnts)
-	print("[STATE] INIT PostEntityPaste");
+
+	print("[STATE] INIT PostEntityPaste on" .. tostring(self));
 	if CLIENT then return end
 	if ent.EntityMods and ent.EntityMods.SuperGlue then
 
-		--print(print_table(ent.EntityMods.SuperGlue))
-		-- local entList = {}
+		local entList = {}
 
-		-- for _, v in pairs(ent.EntityMods.SuperGlue.Children) do
-		-- 	local prop = ents.Create(v.Class)
+		for id, v in pairs(ent.EntityMods.SuperGlue.Children) do
+			local prop = ents.Create(v.Class)
 
-		-- 	prop:SetModel(v.Model)
+			prop:SetModel(v.Model)
 
-		-- 	local pos = Vector(v.Pos.x, v.Pos.y, v.Pos.z)
-		-- 	pos:Rotate(self:GetAngles())
-		-- 	pos = pos + self:GetPos()
+			local pos = Vector(v.Pos.x, v.Pos.y, v.Pos.z)
+			pos:Rotate(self:GetAngles())
+			pos = pos + self:GetPos()
 
-		-- 	prop:SetPos(pos)
-		-- 	prop:SetAngles(v.Ang + self:GetAngles())
+			prop:SetPos(pos)
+			prop:SetAngles(v.Ang + self:GetAngles())
 
-		-- 	prop:SetParent(ent)
+			prop:SetParent(ent)
 
-		-- 	-- prop:Spawn()
+			prop:Spawn()
 
-		-- 	prop:SetMaterial(v.Mat)
-		-- 	prop:SetSkin(v.Skin)
+			prop:SetMaterial(v.Mat)
+			prop:SetSkin(v.Skin)
 
-		-- 	table.insert(entList, prop)
-		-- end
-		-- self.Children = ent.EntityMods.SuperGlue.Children
+			self.Children[id] = prop
+		end
 
-		PrintTable(self.Children)
+		-- PrintTable(self.Children)
+
 		self:GenerateMeshFromEntities(self.Children)
 		self:Spawn()
 
-		if(ent.EntityMods.SuperGlue.Frozen) then
+		if ent.EntityMods.SuperGlue.Frozen then
 			ent:GetPhysicsObject():EnableMotion(false)
 		end
 	end
