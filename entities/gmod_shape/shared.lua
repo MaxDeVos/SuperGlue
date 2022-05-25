@@ -20,6 +20,78 @@ mat_wireframe = Material( "models/wireframe" )
 
 modelPath = "models/hunter/blocks/cube025x025x025.mdl"
 
+
+function formatPose(ent)
+	local posVal = "null"
+	local angVal = "null"
+
+	if not ent.Pos then
+		posVal = ent:GetPos()
+	else
+		posVal = ent.Pos
+	end
+
+	if not ent.Ang then
+		angVal = ent:GetAngles()
+	else
+		angVal = ent.Ang
+	end
+
+	return tostring(posVal) .. "|" .. tostring(angVal)
+end
+
+local rowIterator = 2
+local masterTbl = {{nil, nil, nil, nil},{},{},{}} -- Each contained table is a row
+
+
+function printPoseAll(state, childrenTable, selfInstance, dontPrintDivider)
+	local row = {}
+	if masterTbl[rowIterator] then row = masterTbl[rowIterator] else row = {} end
+	row[1] = state
+	printSinglePose(state, "self_", selfInstance, true)
+	printPoseChildren(state, childrenTable, true)
+	if not dontPrintDivider then rowIterator = rowIterator + 1 end
+end
+
+
+function printPoseChildren(state, childrenTable, dontPrintDivider)
+	local row = {}
+	if masterTbl[rowIterator] then row = masterTbl[rowIterator] else row = {} end
+	row[1] = state
+	for id, child in pairs(childrenTable) do
+		masterTbl[1][id + 2] = "child_" .. tostring(child)
+		row[id + 2] = formatPose(child)
+	end
+	masterTbl[rowIterator] = row
+	if not dontPrintDivider then rowIterator = rowIterator + 1 end
+end
+
+
+function printSinglePose(state, entName, ent,  dontPrintDivider)
+	local row = {}
+	if masterTbl[rowIterator] then row = masterTbl[rowIterator] else row = {} end
+	row[1] = state
+	row[2] = formatPose(ent)
+	masterTbl[1][2] = entName .. tostring(ent)
+	masterTbl[rowIterator] = row
+	if not dontPrintDivider then rowIterator = rowIterator + 1 end
+end
+
+
+function printCSV()
+	for num, row in pairs(masterTbl) do
+		local col = 1
+		out = ""
+		while col < 5 do
+			if not row[col] then row[col] = "" end
+			out = out .. "," .. tostring(row[col])
+			col = col + 1
+		end
+		print(out)
+	end
+end
+
+
 function AdjustVectorTableToWorldCoords(vecTable, pos, angle)
 	local rTable = {}
 	for i, vec in pairs(vecTable) do
@@ -31,9 +103,6 @@ function AdjustVectorTableToWorldCoords(vecTable, pos, angle)
 	return rTable
 end
 
-function ENT:SetupDataTables()
-
-end
 
 -- Don't allow children in a weld to move independently of their parent
 hook.Add("PhysgunPickup", "ChildrenRule", function(ply, ent)
@@ -41,6 +110,7 @@ hook.Add("PhysgunPickup", "ChildrenRule", function(ply, ent)
 		return false
 	end
 end)
+
 
 function dump(o)
 	if type(o) == 'table' then
@@ -55,6 +125,7 @@ function dump(o)
 	end
 end
 
+
 function dumpTypes(o)
 	if type(o) == 'table' then
 		local s = '{ '
@@ -66,6 +137,7 @@ function dumpTypes(o)
 		return type(o)
 	end
 end
+
 
 function dumpKeys(o)
 	if type(o) == 'table' then
@@ -79,13 +151,16 @@ function dumpKeys(o)
 	end
 end
 
+
 function pDump(o)
 	print(dump(o))
 end
 
+
 function pDumpKeys(o)
 	print(dumpKeys(o))
 end
+
 
 function print_table(node)
 
@@ -167,6 +242,7 @@ function print_table(node)
 	print(output_str)
 end
 
+
 function split (inputstr, sep)
 	if sep == nil then
 			sep = "%s"
@@ -178,13 +254,16 @@ function split (inputstr, sep)
 	return t
 end
 
+
 hook.Add("PhysgunPickup","Don't pick up children", function(ply,ent)
 	if ent:GetParent() and ent:GetParent():IsValid() and ent:GetParent():GetClass() == "gmod_poly" then
 		return false
 	end
 end)
--- hook.Add("CanTool","No Toolgun on polys",function( ply, tr, tool )
-	 -- if ( IsValid( tr.Entity ) and tr.Entity:GetParent() and tr.Entity:GetParent():IsValid() and tr.Entity:GetParent():GetClass() == "gmod_poly" ) then
-		 -- return false
-	 -- end
--- end)
+
+
+hook.Add("CanTool","No Toolgun on polys",function( ply, tr, tool )
+	 if ( IsValid( tr.Entity ) and tr.Entity:GetParent() and tr.Entity:GetParent():IsValid() and tr.Entity:GetParent():GetClass() == "gmod_shape" ) then
+		 return false
+	 end
+end)

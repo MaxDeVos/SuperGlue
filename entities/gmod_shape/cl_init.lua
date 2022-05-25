@@ -8,8 +8,8 @@ function ENT:Initialize()
 
 	if SERVER then return end
 
-	print("CLIENT INIT")
-	print("EntIndex" .. tostring(self:EntIndex()))
+	-- print("CLIENT INIT")
+	-- print("EntIndex" .. tostring(self:EntIndex()))
 
 	net.Start("ReqInitSwitching")
 	net.WriteInt(self:EntIndex(), 32)

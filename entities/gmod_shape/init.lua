@@ -38,25 +38,28 @@ function ENT:Initialize()
 
 		if CLIENT then return end
 		self.Children = self.Children or {}
-		print("Initializing " .. self:EntIndex())
+		-- print("Initializing " .. self:EntIndex())
 
+		printSinglePose("Initialize_Start", "Self", self)
 		self:SetModel(modelPath)
 
 		-- Verify that network strings are pooled, regardless of load order (client then server or vise-versa)
 		if util.AddNetworkString( "SendPhysMesh" .. self:EntIndex()) then print() end
 		if util.AddNetworkString( "RequestPhysMesh" .. self:EntIndex()) then print() end
 
-		self:GenerateMeshFromEntities(self.Children)
+		self:GenerateMeshFromEntities()
 
 		self:PhysicsDestroy()
 		self:PhysicsFromMesh(self.Mesh)
 
 		self.totalMass, self.centerOfMass = self:CalculateMassInformation()
 
+		printPoseChildren("Initialize_PreParent", self.Children)
 		for _, child in pairs(self.Children) do
 			child:SetParent(self)
 			-- child:PhysicsDestroy()
 		end
+		printPoseChildren("Initialize_PostParent", self.Children)
 
 		self:SetSolid(SOLID_VPHYSICS)
 		self:SetMoveType(MOVETYPE_VPHYSICS)
@@ -64,8 +67,6 @@ function ENT:Initialize()
 
 		local phys = self:GetPhysicsObject()
 		if phys:IsValid() then
-
-			print("Generated Valid Physics")
 
 			net.Receive("RequestPhysMesh" .. self:EntIndex(), function(len, ply)
 				local physMesh = phys:GetMesh()
@@ -77,6 +78,7 @@ function ENT:Initialize()
 		end
 
 		self:PhysWake()
+		printPoseAll("Initialize_End", self.Children, self)
 
 end
 
@@ -94,10 +96,13 @@ end
 	• self.Children
 	• Each child has a valid physics object
 ]]--
-function ENT:GenerateMeshFromEntities()
+function ENT:GenerateMeshFromEntities(cloned)
+
+	if not cloned then cloned = false end
+
 	local newMesh = {}
-	print("GENERATING MESH FOR" .. tostring(self))
-	PrintTable(self.Children)
+	-- print("GENERATING MESH FOR" .. tostring(self))
+	-- PrintTable(self.Children)
 
 	if not self.Children then print("NO CHILDREN!") end
 
@@ -115,7 +120,6 @@ function ENT:GenerateMeshFromEntities()
 
 			table.insert(newMesh, vec)
 		end
-
 	end
 	self.Mesh = newMesh
 end
@@ -172,11 +176,13 @@ end
 	duplication table should be also stored on that prop_physics, not on prop_physics_my. 
 ]]--
 function ENT:PreEntityCopy()
-	print("[STATE] INIT PreEntityCopy on" .. tostring(self));
+	-- print("[STATE] INIT PreEntityCopy on" .. tostring(self));
 	if CLIENT then return end
 	local info = {}
 
 	info.Children = {}
+
+	printPoseAll("PreEntityCopy_Start", self.Children, self)
 
 	for id, ch in pairs(self.Children) do
 
@@ -184,7 +190,7 @@ function ENT:PreEntityCopy()
 		child.Class = ch:GetClass()
 		child.Model = ch:GetModel()
 		child.Pos = ch:GetPos() - self:GetPos()
-		child.Pos:Rotate(-1 * self:GetAngles())
+		child.Pos:Rotate(-1 * self:GetPhysicsObject():GetAngles())
 		child.Ang = ch:GetAngles() - self:GetAngles()
 		child.Mat = ch:GetMaterial()
 		child.Skin = ch:GetSkin()
@@ -196,6 +202,8 @@ function ENT:PreEntityCopy()
 	info.Mass = self.Mass
 
 	info.Frozen = not self:GetPhysicsObject():IsMoveable()
+
+	printPoseAll("PreEntityCopy_End", info.Children, self)
 
 	duplicator.StoreEntityModifier(self, "SuperGlue", info)
 end
@@ -243,9 +251,13 @@ end
 ]]--
 function ENT:PostEntityPaste(ply, ent, createdEnts)
 
-	print("[STATE] INIT PostEntityPaste on" .. tostring(self));
+	self.Children = {}
+
+	-- print("[STATE] INIT PostEntityPaste on" .. tostring(self));
 	if CLIENT then return end
 	if ent.EntityMods and ent.EntityMods.SuperGlue then
+
+		printPoseAll("PostEntityPaste_Start", ent.EntityMods.SuperGlue.Children, self)
 
 		local entList = {}
 
@@ -260,6 +272,7 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 
 			prop:SetPos(pos)
 			prop:SetAngles(v.Ang + self:GetAngles())
+			-- prop:SetAngles(v.Ang)
 
 			prop:SetParent(ent)
 
@@ -271,13 +284,18 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 			self.Children[id] = prop
 		end
 
+		printPoseAll("PostEntityPaste_PreGeneration", self.Children, self)
+
 		-- PrintTable(self.Children)
 
-		self:GenerateMeshFromEntities(self.Children)
+		self:GenerateMeshFromEntities(true)
 		self:Spawn()
+
+		printPoseAll("PostEntityPaste_End", self.Children, self)
 
 		if ent.EntityMods.SuperGlue.Frozen then
 			ent:GetPhysicsObject():EnableMotion(false)
 		end
 	end
+	printCSV()
 end
