@@ -14,13 +14,25 @@ SuperGlue is _(read: will be)_ a Garry's Mod add-on that allows you to rigidly a
 * Compadible with vanilla Duplicator tool
 * Works in multiplayer
 
+|Function                          |PolyWeld (current)|Forge|PolyWeld (pre-2015)|SuperGlue|
+|----------------------------------|------------------|-----|-------------------|---------|
+|Combine 2 objects                 |:x:               |:heavy_check_mark:|:heavy_check_mark: |:heavy_check_mark:|
+|Preserve Constraints              |:x:               |:heavy_check_mark:|:heavy_check_mark: |:heavy_check_mark:|
+|Multiplayer                       |:x:               |:heavy_check_mark:|:heavy_check_mark: |:heavy_check_mark:|
+|Combine 3+ objects                |:x:               |:x:  |:heavy_check_mark: |:heavy_check_mark:|
+|Visual Selection Indicator        |:x:               |:x:  |:heavy_check_mark: |:heavy_check_mark:|
+|Reversible                        |:x:               |:x:  |:x:                |:heavy_check_mark:|
+|Retain Center of Mass             |:x:               |:x:  |:x:                |:heavy_check_mark:|
+|Saves in Singleplayer             |:x:               |:x:  |:x:                |:heavy_check_mark:|
+|Works with Vanilla Duplicator tool|:x:               |:x:  |:x:                |:heavy_check_mark:|
+
 ## Standing on the shoulders of giants
 
 SuperGlue is certainly not the first to attempt to solve this problem. This addon takes inspiration from a number of projects that came before it, and those developers deserve credit.
 
 ### [PolyWeld](https://steamcommunity.com/sharedfiles/filedetails/?id=344795193) by [Bobblehead](https://steamcommunity.com/id/bobbleheadbob)
 
- PolyWeld, formally known as _Improved Polyweld Tool_, is as ubiquitous in the gmod community as the weld tool itself. This tool worked fantastically and was capable of the leading goal of this project, _rigidly attaching any number of props together in a single operation_. That said, it did not work across saves, duplications, or reloads. Regardless, the addon was widely popular until around 2015, until a bug appeared in PolyWeld that caused the entity selection process to be effectively random, which effectively rendered PolyWeld useless. Unfortunately, it seems to have been since abandonded by its creators. There are a number of flaws fundemental to the design of PolyWeld that SuperGlue looks to resolve. Some of these are:
+ PolyWeld, formally known as _Improved Polyweld Tool_, is as ubiquitous in the gmod community as the weld tool itself. This tool worked fantastically and was capable of the leading goal of this project, _rigidly attaching any number of props together in a single operation_. That said, it did not work across saves, duplications, or reloads. That said, the addon was widely popular until around 2015, until a bug appeared in PolyWeld that caused the entity selection process to be effectively random, which effectively rendered PolyWeld useless. Unfortunately, it seems to have been since abandonded by its creators. There are a number of flaws fundemental to the design of Forge that SuperGlue looks to resolve. Some of these are:
 
 * Limitation of joining two props at a time
 * Incompadible with vanilla duplicator
