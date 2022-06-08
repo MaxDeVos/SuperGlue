@@ -23,6 +23,8 @@ TODO
 util.AddNetworkString( "ReqInitSwitching" )
 util.PrecacheModel("models/hunter/blocks/cube05x05x05.mdl")
 
+CreateConVar("max_tableActive", "false")
+
 net.Receive("ReqInitSwitching", function(len, ply)
 	local entIndex = net.ReadInt(32)
 	local netString = "ResInitSwitching" .. entIndex
@@ -40,6 +42,8 @@ function ENT:Initialize()
 		self.Children = self.Children or {}
 		-- print("Initializing " .. self:EntIndex())
 
+		if not self.cloned then self.cloned = false end
+
 		printSinglePose("Initialize_Start", "Self", self)
 		self:SetModel(modelPath)
 
@@ -47,7 +51,11 @@ function ENT:Initialize()
 		if util.AddNetworkString( "SendPhysMesh" .. self:EntIndex()) then print() end
 		if util.AddNetworkString( "RequestPhysMesh" .. self:EntIndex()) then print() end
 
-		self:GenerateMeshFromEntities()
+		if not self.cloned then
+			self:GenerateMeshFromEntities()
+		else
+			self:GenerateClonedMeshFromEntities()
+		end
 
 		self:PhysicsDestroy()
 		self:PhysicsFromMesh(self.Mesh)
@@ -83,8 +91,10 @@ function ENT:Initialize()
 end
 
 
-function ENT:ConfigureChildren(childrenList)
+function ENT:ConfigureChildren(childrenList, posTable, angTable)
 	self.Children = childrenList
+	self.posTable = posTable
+	self.angTable = angTable
 end
 
 
@@ -96,9 +106,7 @@ end
 	• self.Children
 	• Each child has a valid physics object
 ]]--
-function ENT:GenerateMeshFromEntities(cloned)
-
-	if not cloned then cloned = false end
+function ENT:GenerateMeshFromEntities()
 
 	local newMesh = {}
 	-- print("GENERATING MESH FOR" .. tostring(self))
@@ -110,7 +118,8 @@ function ENT:GenerateMeshFromEntities(cloned)
 	for _, childEnt in pairs(self.Children) do
 		local childPhys = childEnt:GetPhysicsObject()
 		local delta = childEnt:GetPos() - self:GetPos()
-		local angle = childPhys:GetAngles()
+		local angle = self.angTable[_]
+		-- print("error = " .. tostring(angle - self.angTable[_]))
 		local physMesh = childPhys:GetMesh()
 
 		for i, vert in pairs(physMesh) do
@@ -165,6 +174,11 @@ function ENT:Think()
 	if CLIENT then return end
 end
 
+function ENT:OnRemove()
+	print("RESETTING TABLE")
+	resetTable()
+end
+
 
 -- COPY ORDER: PreEntityCopy, PostEntityCopy, OnEntityCopyTableFinish 
 
@@ -189,9 +203,9 @@ function ENT:PreEntityCopy()
 		local child = {}
 		child.Class = ch:GetClass()
 		child.Model = ch:GetModel()
-		child.Pos = ch:GetPos() - self:GetPos()
-		child.Pos:Rotate(-1 * self:GetPhysicsObject():GetAngles())
-		child.Ang = ch:GetAngles() - self:GetAngles()
+		child.Pos = self.posTable[id]
+		child.Ang = self.angTable[id]
+		print(tostring(ch) .. "@PreEntityCopy  |  POS: " .. tostring(child.Pos) .. "  |  ANG: " .. tostring(child.Ang))
 		child.Mat = ch:GetMaterial()
 		child.Skin = ch:GetSkin()
 
@@ -241,6 +255,33 @@ function ENT:OnDuplicated( entTable )
 end
 
 
+
+function ENT:GenerateClonedMeshFromEntities()
+	local newMesh = {}
+	-- print("GENERATING MESH FOR" .. tostring(self))
+	-- PrintTable(self.Children)
+
+	if not self.Children then print("NO CHILDREN!") end
+
+	-- For each entity in the selected entities list
+	for _, childEnt in pairs(self.Children) do
+		local childPhys = childEnt:GetPhysicsObject()
+		local physMesh = childPhys:GetMesh()
+		local delta = childEnt:GetPos() - self:GetPos()
+		local angle = childEnt:GetAngles()
+		print(tostring(ch) .. "@GenPhysMesh  |  POS: " .. tostring(childEnt:GetPos()) .. "  |  ANG: " .. tostring(childEnt:GetAngles()))
+		for i, vert in pairs(physMesh) do
+			local vec = vert["pos"]
+			vec:Rotate(angle)
+			vec = vec + delta
+
+			table.insert(newMesh, vec)
+		end
+	end
+	self.Mesh = newMesh
+end
+
+
 --[[
 	Name: PostEntityPaste
 	Called after the duplicator pastes the entity, after the bone/entity modifiers have been applied to the entity. 
@@ -263,24 +304,26 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 
 		for id, v in pairs(ent.EntityMods.SuperGlue.Children) do
 			local prop = ents.Create(v.Class)
-
+			print(tostring(ch) .. "@PostEntityPaste Start |  POS: " .. tostring(v.Pos) .. "  |  ANG: " .. tostring(v.Ang))
 			prop:SetModel(v.Model)
 
 			local pos = Vector(v.Pos.x, v.Pos.y, v.Pos.z)
-			pos:Rotate(self:GetAngles())
-			pos = pos + self:GetPos()
+			-- pos:Rotate(v.Ang)
 
 			prop:SetPos(pos)
-			prop:SetAngles(v.Ang + self:GetAngles())
-			-- prop:SetAngles(v.Ang)
+			-- prop:SetPos(Vector(0,0,0))
+
+			-- prop:SetAngles(v.Ang + self:GetAngles())
+			prop:SetAngles(v.Ang)
 
 			prop:SetParent(ent)
-
 			prop:Spawn()
 
 			prop:SetMaterial(v.Mat)
 			prop:SetSkin(v.Skin)
 
+
+			print(tostring(ch) .. "@PostEntityPaste End |  POS: " .. tostring(prop:GetPos()) .. "  |  ANG: " .. tostring(prop:GetAngles()))
 			self.Children[id] = prop
 		end
 
@@ -288,7 +331,7 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 
 		-- PrintTable(self.Children)
 
-		self:GenerateMeshFromEntities(true)
+		self.cloned = true
 		self:Spawn()
 
 		printPoseAll("PostEntityPaste_End", self.Children, self)
