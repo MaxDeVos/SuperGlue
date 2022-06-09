@@ -62,7 +62,6 @@ function ENT:Initialize()
 
 		for _, child in pairs(self.Children) do
 			child:SetParent(self)
-			-- child:PhysicsDestroy()
 		end
 
 		self:SetSolid(SOLID_VPHYSICS)
@@ -85,10 +84,8 @@ function ENT:Initialize()
 end
 
 
-function ENT:ConfigureChildren(childrenList, posTable, angTable)
+function ENT:ConfigureChildren(childrenList)
 	self.Children = childrenList
-	self.posTable = posTable
-	self.angTable = angTable
 end
 
 
@@ -110,7 +107,7 @@ function ENT:GenerateMeshFromEntities()
 	for _, childEnt in pairs(self.Children) do
 		local childPhys = childEnt:GetPhysicsObject()
 		local delta = childEnt:GetPos() - self:GetPos()
-		local angle = self.angTable[_]
+		local angle = childEnt:GetAngles()
 		local physMesh = childPhys:GetMesh()
 
 		for i, vert in pairs(physMesh) do
@@ -130,7 +127,6 @@ function ENT:GenerateClonedMeshFromEntities()
 
 	if not self.Children then print("NO CHILDREN!") end
 
-	-- For each entity in the selected entities list
 	for _, childEnt in pairs(self.Children) do
 		local childPhys = childEnt:GetPhysicsObject()
 		local physMesh = childPhys:GetMesh()
@@ -190,6 +186,83 @@ function ENT:OnRemove() resetTable() end
 -- COPY ORDER: PreEntityCopy, PostEntityCopy, OnEntityCopyTableFinish 
 
 --[[
+	Name: PreEntityCopy
+	Called before the duplicator copies the entity. If you are looking for a way to make the duplicator spawn 
+	another entity when duplicated. ( For example, you duplicate a "prop_physics", but you want the duplicator 
+	to spawn "prop_physics_my" ), you should add prop_physics.ClassOverride = "prop_physics_my". The 
+	duplication table should be also stored on that prop_physics, not on prop_physics_my. 
+]]--
+function ENT:PreEntityCopy()
+
+	if CLIENT then return end
+	local entData = {}
+
+	entData.Children = {}
+
+
+	for id, ch in pairs(self.Children) do
+
+		local child = {}
+		child.Class = ch:GetClass()
+		child.Model = ch:GetModel()
+		child.Pos = ch:GetLocalPos()
+		child.Ang = ch:GetLocalAngles()
+		child.Mat = ch:GetMaterial()
+		child.Skin = ch:GetSkin()
+
+		entData.Children[id] = child
+
+	end
+
+	entData.Mass = self.Mass
+
+	entData.Pos = self:GetPos()
+	entData.Ang = self:GetAngles()
+
+	entData.Frozen = not self:GetPhysicsObject():IsMoveable()
+
+
+	duplicator.StoreEntityModifier(self, "SuperGlue", entData)
+end
+
+--[[
+	Name: PostEntityPaste
+	Called after the duplicator pastes the entity, after the bone/entity modifiers have been applied to the entity. 
+	This hook is called after ENTITY:OnDuplicated. 
+
+	When this state is reached:
+	
+]]--
+function ENT:PostEntityPaste(ply, ent, createdEnts)
+
+	self.Children = {}
+
+	if ent.EntityMods and ent.EntityMods.SuperGlue then
+
+		for id, entData in pairs(ent.EntityMods.SuperGlue.Children) do
+			local newChild = ents.Create(entData.Class)
+			newChild:SetModel(entData.Model)
+			newChild:SetParent(ent)
+
+			newChild:SetLocalPos(Vector(entData.Pos.x, entData.Pos.y, entData.Pos.z))
+			newChild:SetLocalAngles(entData.Ang)
+
+			newChild:Spawn()
+
+			newChild:SetMaterial(entData.Mat)
+			newChild:SetSkin(entData.Skin)
+
+			self.Children[id] = newChild
+		end
+
+		self.cloned = true
+		self:Spawn()
+
+	end
+	printCSV()
+end
+
+--[[
 	Name: PostEntityCopy
 	Called after the duplicator finished copying the entity. See also ENTITY:PreEntityCopy and ENTITY:PostEntityPaste. 
 ]]--
@@ -208,83 +281,3 @@ function ENT:OnEntityCopyTableFinish( tableData ) end
 	When this state is reached:
 ]]--
 function ENT:OnDuplicated( entTable ) end
-
-
---[[
-	Name: PreEntityCopy
-	Called before the duplicator copies the entity. If you are looking for a way to make the duplicator spawn 
-	another entity when duplicated. ( For example, you duplicate a "prop_physics", but you want the duplicator 
-	to spawn "prop_physics_my" ), you should add prop_physics.ClassOverride = "prop_physics_my". The 
-	duplication table should be also stored on that prop_physics, not on prop_physics_my. 
-]]--
-function ENT:PreEntityCopy()
-
-	if CLIENT then return end
-	local info = {}
-
-	info.Children = {}
-
-
-	for id, ch in pairs(self.Children) do
-
-		local child = {}
-		child.Class = ch:GetClass()
-		child.Model = ch:GetModel()
-		child.Pos = ch:GetLocalPos()
-		child.Ang = ch:GetLocalAngles()
-		child.Mat = ch:GetMaterial()
-		child.Skin = ch:GetSkin()
-
-		info.Children[id] = child
-
-	end
-
-	info.Mass = self.Mass
-
-	info.Pos = self:GetPos()
-	info.Ang = self:GetAngles()
-
-	info.Frozen = not self:GetPhysicsObject():IsMoveable()
-
-
-	duplicator.StoreEntityModifier(self, "SuperGlue", info)
-end
-
---[[
-	Name: PostEntityPaste
-	Called after the duplicator pastes the entity, after the bone/entity modifiers have been applied to the entity. 
-	This hook is called after ENTITY:OnDuplicated. 
-
-	When this state is reached:
-	
-]]--
-function ENT:PostEntityPaste(ply, ent, createdEnts)
-
-	self.Children = {}
-
-	if ent.EntityMods and ent.EntityMods.SuperGlue then
-
-		local entList = {}
-
-		for id, v in pairs(ent.EntityMods.SuperGlue.Children) do
-			local prop = ents.Create(v.Class)
-			prop:SetModel(v.Model)
-			prop:SetParent(ent)
-
-			prop:SetLocalPos(Vector(v.Pos.x, v.Pos.y, v.Pos.z))
-			prop:SetLocalAngles(v.Ang)
-
-			prop:Spawn()
-
-			prop:SetMaterial(v.Mat)
-			prop:SetSkin(v.Skin)
-
-			self.Children[id] = prop
-		end
-
-		self.cloned = true
-		self:Spawn()
-
-	end
-	printCSV()
-end

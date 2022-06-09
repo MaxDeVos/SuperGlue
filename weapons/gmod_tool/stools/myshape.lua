@@ -46,14 +46,10 @@ end
 
 function TOOL:RightClick( trace )
 	local cleanedTable = {}
-	local posTable = {}
-	local angTable = {}
 	local counter = 1
 	for entity,isSelected in pairs(self.selected) do
 		if self.selected[entity] then
 			cleanedTable[counter] = entity
-			posTable[counter] = entity:GetPos()
-			angTable[counter] = entity:GetAngles()
 			counter = counter + 1
 		end
 	end
@@ -66,7 +62,7 @@ function TOOL:RightClick( trace )
 	local ent = ents.Create("gmod_shape")
 	ent:SetModel("models/hunter/blocks/cube025x025x025.mdl")
 
-	ent:ConfigureChildren(cleanedTable, posTable, angTable)
+	ent:ConfigureChildren(cleanedTable)
 	ent:SetPos(trace.HitPos)
 	ent:Spawn()
 
