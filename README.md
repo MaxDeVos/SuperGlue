@@ -1,18 +1,20 @@
 # SuperGlue
 
-SuperGlue is _(read: will be)_ a Garry's Mod add-on that allows you to rigidly attach any number of props together by grouping them under a single physics mesh. The approach taken by SuperGlue allows for rigid, glitchless prop combinations that retain the functionality, constraints, physics, and pose of the original props. It is also compatible with the vanilla Duplicator tool, and SuperGlued contraptions are persistent across singleplayer saves. At its core, SuperGlue is the tool that the Weld tool should've been.
+SuperGlue is _(read: will be)_ a Garry's Mod add-on that allows you to rigidly attach any number of props together by grouping them under a single physics mesh. The approach taken by SuperGlue allows for rigid, glitchless prop combinations that retain the functionality, constraints, physics, and pose of the original props. SuperGlued contraptions are also work seamlessly with the vanilla Duplicator tool, and are persistent across singleplayer saves. At its core, SuperGlue is the tool that the Weld tool should've been.
 
 ## Core Functionalities
 
-* Rigidly attaches (weld) any number of props together in a single operation
-* Retains properties of the original props
+SuperGlue takes a fundementally different, novel approach to object joining in Source that allows it to do things previous tools weren't capable of. SuperGlue can:
+
+* Rigidly attach (weld) any number of props together in a single operation
+* Retain properties of the original props
   * Functionality
   * Constraints
   * Physics properties
   * Position and angle
-* Persistent across singleplayer saves
-* Compadible with vanilla Duplicator tool
-* Works in multiplayer
+* Work seamlessly with vanilla Duplicator tool
+* Be persistent across singleplayer saves
+* Work in multiplayer
 
 |Function                          |PolyWeld (current)|Forge|PolyWeld (pre-2015)|SuperGlue|
 |----------------------------------|------------------|-----|-------------------|---------|
