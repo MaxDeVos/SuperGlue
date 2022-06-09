@@ -75,6 +75,7 @@ local event = {}
 	print-time, or print multiple seperate tables, one for each type of data.
 ]]--
 
+CreateConVar("max_tableActive", "false")
 
 function resetTable()
 	eventIterator = 1

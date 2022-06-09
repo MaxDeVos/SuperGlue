@@ -1,31 +1,40 @@
-AddCSLuaFile("cl_init.lua")
-AddCSLuaFile("shared.lua")
-include("shared.lua")
-
 --[[
 Note to the reader: You will notice that this file is commented. While I'd like to believe that 
 I did this out of the kindness of my heart, the truth is that Lua is an ugly, terrible language
 and the moment you try to do anything more complex than FizzBuzz, keeping track of what is happening
 becomes impossible. Or maybe I'm just stupid. The comments are your North Star, and you are a musketeer. 
 In this metaphor, I am baby Jesus and you are trying to bring me gold and blankets. Regardless, the
-comments are the only way through this otherwise impassible landscape. Good luck.
+comments are the only way through this otherwise impassible landscape.
+
+PS: Anything surrounded with -- DEBUGGER and -- /DEBUGGER is code that exists only for, you guessed it,
+debugging. This code is all commented out or removed for production.
+
+Good luck.
 -Max
 
 TODO
 • Center of Mass
-• Duping
 • Saving
 • Shadows
 • Constraints
+
+DONE
+• Mesh Debugger (client wireframe renderer)
+• Mesh Generation
+• Entity fitting/updating
+• Duplication
 ]]--
 
+AddCSLuaFile("cl_init.lua")
+AddCSLuaFile("shared.lua")
+include("shared.lua")
 
 util.AddNetworkString( "ReqInitSwitching" )
 util.PrecacheModel("models/hunter/blocks/cube05x05x05.mdl")
-util.AddNetworkString( "vomit" )
 
-CreateConVar("max_tableActive", "false")
 
+-- DEBUGGER This system exists to guarantee that the network strings are cached before a valid PhysMesh is created, since
+--          the client needs to recieve that as quickly as possible. 
 net.Receive("ReqInitSwitching", function(len, ply)
 	local entIndex = net.ReadInt(32)
 	local netString = "ResInitSwitching" .. entIndex
@@ -35,6 +44,7 @@ net.Receive("ReqInitSwitching", function(len, ply)
 	net.Start(netString)
 	net.Broadcast()
 end )
+-- /DEBUGGER
 
 
 function ENT:Initialize()
@@ -46,9 +56,10 @@ function ENT:Initialize()
 
 		self:SetModel(modelPath)
 
-		-- Verify that network strings are pooled, regardless of load order (client then server or vise-versa)
-		if util.AddNetworkString( "SendPhysMesh" .. self:EntIndex()) then end
-		if util.AddNetworkString( "RequestPhysMesh" .. self:EntIndex()) then end
+		-- DEBUGGER: Verify that network strings are pooled, regardless of load order (client then server or vise-versa)
+		if util.AddNetworkString( "SendPhysMesh" .. self:EntIndex()) then print() end -- insert print() to shut up the linter
+		if util.AddNetworkString( "RequestPhysMesh" .. self:EntIndex()) then print() end -- same deal here
+		-- /DEBUGGER
 
 		if not self.cloned then
 			self:GenerateMeshFromEntities()
@@ -71,76 +82,19 @@ function ENT:Initialize()
 		local phys = self:GetPhysicsObject()
 		if phys:IsValid() then
 
+			-- DEBUGGER: Writes PhysMesh to table and sends to client for rendering.
 			net.Receive("RequestPhysMesh" .. self:EntIndex(), function(len, ply)
 				local physMesh = phys:GetMesh()
 				net.Start("SendPhysMesh" .. self:EntIndex())
 				net.WriteTable(physMesh)
 				net.Broadcast()
 			end )
+			-- /DEBUGGER
+
 			phys:SetMass(self.totalMass)
 		end
 
 		self:PhysWake()
-end
-
-
-function ENT:ConfigureChildren(childrenList)
-	self.Children = childrenList
-end
-
-
---[[
-	Name: GenerateMeshFromEntities
-	Iterates through objects in self.Children and combines their Physics Meshes into one list of verticies
-	
-	Requires:
-	• self.Children
-	• Each child has a valid physics object
-]]--
-function ENT:GenerateMeshFromEntities()
-
-	local newMesh = {}
-
-	if not self.Children then print("NO CHILDREN!") end
-
-	-- For each entity in the selected entities list
-	for _, childEnt in pairs(self.Children) do
-		local childPhys = childEnt:GetPhysicsObject()
-		local delta = childEnt:GetPos() - self:GetPos()
-		local angle = childEnt:GetAngles()
-		local physMesh = childPhys:GetMesh()
-
-		for i, vert in pairs(physMesh) do
-			local vec = vert["pos"]
-			vec:Rotate(angle)
-			vec = vec + delta
-
-			table.insert(newMesh, vec)
-		end
-	end
-	self.Mesh = newMesh
-end
-
-
-function ENT:GenerateClonedMeshFromEntities()
-	local newMesh = {}
-
-	if not self.Children then print("NO CHILDREN!") end
-
-	for _, childEnt in pairs(self.Children) do
-		local childPhys = childEnt:GetPhysicsObject()
-		local physMesh = childPhys:GetMesh()
-		local delta = childEnt:GetLocalPos()
-		local angle = childEnt:GetLocalAngles()
-		for i, vert in pairs(physMesh) do
-			local vec = vert["pos"]
-			vec:Rotate(angle)
-			vec = vec + delta
-
-			table.insert(newMesh, vec)
-		end
-	end
-	self.Mesh = newMesh
 end
 
 
@@ -176,10 +130,78 @@ function ENT:CalculateMassInformation()
 
 	return massSum, COM_Pos_Calc
 end
+
+
+function ENT:ConfigureChildren(childrenList)
+	self.Children = childrenList
+end
+
+
 --[[
-   Name: Think
+	Name: GenerateMeshFromEntities
+	Iterates through objects in self.Children and combines their Physics Meshes into one list of verticies, which
+	becomes the Physics Mesh of the parent object.
+	
+	Requires:
+	• self.Children
+	• Each child has a valid physics object
 ]]--
-function ENT:Think() if CLIENT then return end end
+function ENT:GenerateMeshFromEntities()
+
+	local newMesh = {}
+
+	if not self.Children then print("NO CHILDREN!") end
+
+	for _, childEnt in pairs(self.Children) do
+		local childPhys = childEnt:GetPhysicsObject()
+		local delta = childEnt:GetPos() - self:GetPos() -- Get position relative to parent object (LocalPos() had some issue here)
+		local angle = childEnt:GetAngles()
+		local physMesh = childPhys:GetMesh()
+
+		for i, vert in pairs(physMesh) do
+			local vec = vert["pos"]
+			vec:Rotate(angle)
+			vec = vec + delta
+
+			table.insert(newMesh, vec)
+		end
+	end
+	self.Mesh = newMesh
+end
+
+
+--[[
+	Name: GenerateClonedMeshFromEntities
+	Iterates through objects in self.Children and combines their Physics Meshes into one list of verticies using local coordinates,
+	which becomes the Physics Mesh of the resultant cloned parent object. The only difference between this and GenerateMeshFromEntities()
+	is that we only deal with local (parent-relative) coordinates.
+	
+	Requires:
+	• self.Children
+	• Each child has a valid physics object
+]]--
+function ENT:GenerateClonedMeshFromEntities()
+	local newMesh = {}
+
+	if not self.Children then print("NO CHILDREN!") end
+
+	for _, childEnt in pairs(self.Children) do
+		local childPhys = childEnt:GetPhysicsObject()
+		local physMesh = childPhys:GetMesh()
+		local delta = childEnt:GetLocalPos()
+		local angle = childEnt:GetLocalAngles()
+		for i, vert in pairs(physMesh) do
+			local vec = vert["pos"]
+			vec:Rotate(angle)
+			vec = vec + delta
+
+			table.insert(newMesh, vec)
+		end
+	end
+	self.Mesh = newMesh
+end
+
+
 function ENT:OnRemove() resetTable() end
 
 
@@ -187,10 +209,8 @@ function ENT:OnRemove() resetTable() end
 
 --[[
 	Name: PreEntityCopy
-	Called before the duplicator copies the entity. If you are looking for a way to make the duplicator spawn 
-	another entity when duplicated. ( For example, you duplicate a "prop_physics", but you want the duplicator 
-	to spawn "prop_physics_my" ), you should add prop_physics.ClassOverride = "prop_physics_my". The 
-	duplication table should be also stored on that prop_physics, not on prop_physics_my. 
+	Aggregates relevant information about the object and its children for duplication. 
+	Inspired by source code from PolyWeld.
 ]]--
 function ENT:PreEntityCopy()
 
@@ -216,6 +236,8 @@ function ENT:PreEntityCopy()
 
 	entData.Mass = self.Mass
 
+	-- Since we're using LocalPos and LocalAng, we also need to store the original position of the entity I think
+	-- I haven't thought about this very hard.
 	entData.Pos = self:GetPos()
 	entData.Ang = self:GetAngles()
 
@@ -225,13 +247,17 @@ function ENT:PreEntityCopy()
 	duplicator.StoreEntityModifier(self, "SuperGlue", entData)
 end
 
+
+-- PASTE ORDER: Initialize() -> OnEntityCopyTableFinish() -> PostEntityPaste()
+
 --[[
 	Name: PostEntityPaste
-	Called after the duplicator pastes the entity, after the bone/entity modifiers have been applied to the entity. 
-	This hook is called after ENTITY:OnDuplicated. 
+	Unpacks data bundled by PreEntityCopy(), creates child entities with their respective properties
+	and "respawns" our object with the correct configuration.
 
 	When this state is reached:
-	
+	• Initialize() has been run on this currently childless parent object, leaving it in a quasi-null limbo state
+	• "ent", the parent object to be duplicated, has run PreEntityCopy().
 ]]--
 function ENT:PostEntityPaste(ply, ent, createdEnts)
 
@@ -242,8 +268,10 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 		for id, entData in pairs(ent.EntityMods.SuperGlue.Children) do
 			local newChild = ents.Create(entData.Class)
 			newChild:SetModel(entData.Model)
-			newChild:SetParent(ent)
 
+			-- We define the parent first so we can take advantage of LocalPos and LocalAngles, allowing us
+			-- to completely isolate ourselves from those scary World coordinates (i am very bad at math)
+			newChild:SetParent(ent)
 			newChild:SetLocalPos(Vector(entData.Pos.x, entData.Pos.y, entData.Pos.z))
 			newChild:SetLocalAngles(entData.Ang)
 
@@ -256,23 +284,28 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 		end
 
 		self.cloned = true
-		self:Spawn()
+		self:Spawn() -- "Respawn" object now that the children exist.
 
 	end
 	printCSV()
 end
+
 
 --[[
 	Name: PostEntityCopy
 	Called after the duplicator finished copying the entity. See also ENTITY:PreEntityCopy and ENTITY:PostEntityPaste. 
 ]]--
 function ENT:PostEntityCopy() end
+
+
 --[[
    Name: OnEntityCopyTableFinish
    Called after duplicator finishes saving the entity, allowing you to modify the save data. 
    This is called after ENTITY:PostEntityCopy. 
 ]]--
 function ENT:OnEntityCopyTableFinish( tableData ) end
+
+
 --[[
 	Name: OnDuplicated
 	Called on any entity after it has been created by the duplicator and before any bone/entity modifiers have been applied.

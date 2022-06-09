@@ -33,6 +33,7 @@ function ENT:Initialize()
 end
 
 
+-- Empty DRAW hook to verify that the clientside "model" doesn't get shown.
 function ENT:Draw()
 	self:DrawMesh() -- Uncomment to draw debug wireframes
 end
