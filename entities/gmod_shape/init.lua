@@ -3,8 +3,8 @@ Note to the reader: You will notice that this file is commented. While I'd like 
 I did this out of the kindness of my heart, the truth is that Lua is an ugly, terrible language
 and the moment you try to do anything more complex than FizzBuzz, keeping track of what is happening
 becomes impossible. Or maybe I'm just stupid. The comments are your North Star, and you are a musketeer. 
-In this metaphor, I am baby Jesus and you are trying to bring me gold and blankets. Regardless, the
-comments are the only way through this otherwise impassible landscape.
+In this metaphor, I am baby Jesus and you are trying to bring me gold and blankets (don't think about 
+this very hard). Regardless, the comments are the only way through this otherwise impassible landscape.
 
 PS: Anything surrounded with -- DEBUGGER and -- /DEBUGGER is code that exists only for, you guessed it,
 debugging. This code is all commented out or removed for production.

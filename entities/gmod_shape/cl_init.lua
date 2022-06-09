@@ -6,6 +6,8 @@ local noTableFlag = false
 
 function ENT:Initialize()
 
+	-- DEBUGGER: Handles recieving of PhysMesh for wireframe drawing. Yep, that's right, this 
+	--           entire file exists nearly exclusively for debugging. Such is life.
 	if SERVER then return end
 
 	net.Start("ReqInitSwitching")
@@ -29,13 +31,15 @@ function ENT:Initialize()
 		print("CLIENT HAS VALID PHYSICS (THIS IS WEIRD)")
 		phys:EnableCollisions(false)
 	end
-
+	-- /DEBUGGER
 end
 
 
 -- Empty DRAW hook to verify that the clientside "model" doesn't get shown.
 function ENT:Draw()
+	-- DEBUGGER
 	self:DrawMesh() -- Uncomment to draw debug wireframes
+	-- /DEBUGGER
 end
 
 

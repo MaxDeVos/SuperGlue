@@ -1,7 +1,8 @@
 --[[
 	Note About This File:
-	it turns out that my hoarding habits aren't limited to the real world
-	also I hate Lua an unbelievable amount
+	It turns out that my hoarding habits aren't limited to the real world. This is code that 
+	I wrote at one point and turned out to be stupid (even stupider than the other code, if you can believe it),
+	and it definitely should just be deleted. also I hate Lua an unbelievable amount.
 ]]--
 
 
@@ -59,6 +60,18 @@ function ENT:DrawTriangles()
 	end
 	cam.End3D()
 end
+-- Utility function for DrawTriangles()
+function AdjustVectorTableToWorldCoords(vecTable, pos, angle)
+	local rTable = {}
+	for i, vec in pairs(vecTable) do
+		rTable[i] = Vector(vec["pos"])
+		rTable[i]:Rotate(angle)
+		rTable[i]:Add(pos)
+	end
+
+	return rTable
+end
+
 
 
 --[[
@@ -129,7 +142,3 @@ function ENT:CreateZombieProp(visibleProp, physicsModelPath)
 
 	self:PhysWake() -- Enabling the physics motion
 end
-
--- ================================
---    The CHAOS ZONE starts here
--- ================================
