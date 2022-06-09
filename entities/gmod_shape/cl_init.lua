@@ -8,9 +8,6 @@ function ENT:Initialize()
 
 	if SERVER then return end
 
-	-- print("CLIENT INIT")
-	-- print("EntIndex" .. tostring(self:EntIndex()))
-
 	net.Start("ReqInitSwitching")
 	net.WriteInt(self:EntIndex(), 32)
 	net.SendToServer()
@@ -53,7 +50,6 @@ end
 function ENT:DrawMesh()
 	if not self.meshTable then
 		if not noTableFlag then
-			-- print("[ERROR] CLIENT HAS NO MESHTABLE")
 			noTableFlag = true
 		end return end
 	noTableFlag = false

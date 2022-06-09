@@ -14,12 +14,6 @@ selectedEnts = {}
 function TOOL:LeftClick(trace)
 	local ent = trace.Entity
 	print(tostring(ent))
-	ent:InstallDataTable()
-	PrintTable(ent:GetNetworkVars())
-	-- net.Start("vomit")
-	-- net.Broadcast()
-	-- print("ANGLES" .. tostring(ent:GetAngles()))
-	-- print("NETANGLES: " .. tostring(ent:GetNetworkAngles()))
 	return true
 end
 

@@ -15,7 +15,6 @@ function ENT:Initialize()
 	if phys:IsValid() then
 		phys:Wake()
 	end
-	print(tostring(self) .. " SERANG:  " .. tostring(self:GetAngles()))
 
 end
 

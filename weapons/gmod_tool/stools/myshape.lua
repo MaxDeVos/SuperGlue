@@ -45,7 +45,6 @@ end
 
 
 function TOOL:RightClick( trace )
-	PrintTable(self.selected)
 	local cleanedTable = {}
 	local posTable = {}
 	local angTable = {}
@@ -56,7 +55,6 @@ function TOOL:RightClick( trace )
 			posTable[counter] = entity:GetPos()
 			angTable[counter] = entity:GetAngles()
 			counter = counter + 1
-			print("ENTPOS: " .. tostring(entity:GetPos()) .. "   | ENTANG: " .. tostring(entity:GetAngles()))
 		end
 	end
 
@@ -75,11 +73,6 @@ function TOOL:RightClick( trace )
 	self:ClearSelection()
 	return true
 end
-
--- function TOOL:RightClick( trace )
--- 	local ent = ents.Create("gmod_childtest")
--- 	ent:Spawn()
--- end
 
 function TOOL:Reload( trace )
 	print("[STATE] Shape Reload");

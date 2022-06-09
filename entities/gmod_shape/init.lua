@@ -47,8 +47,8 @@ function ENT:Initialize()
 		self:SetModel(modelPath)
 
 		-- Verify that network strings are pooled, regardless of load order (client then server or vise-versa)
-		if util.AddNetworkString( "SendPhysMesh" .. self:EntIndex()) then print() end
-		if util.AddNetworkString( "RequestPhysMesh" .. self:EntIndex()) then print() end
+		if util.AddNetworkString( "SendPhysMesh" .. self:EntIndex()) then end
+		if util.AddNetworkString( "RequestPhysMesh" .. self:EntIndex()) then end
 
 		if not self.cloned then
 			self:GenerateMeshFromEntities()
@@ -60,12 +60,10 @@ function ENT:Initialize()
 
 		self.totalMass, self.centerOfMass = self:CalculateMassInformation()
 
-		printPoseChildren("Initialize_PreParent", self.Children)
 		for _, child in pairs(self.Children) do
 			child:SetParent(self)
 			-- child:PhysicsDestroy()
 		end
-		printPoseChildren("Initialize_PostParent", self.Children)
 
 		self:SetSolid(SOLID_VPHYSICS)
 		self:SetMoveType(MOVETYPE_VPHYSICS)
@@ -84,7 +82,6 @@ function ENT:Initialize()
 		end
 
 		self:PhysWake()
-		printPoseAll("Initialize_End", self.Children, self)
 end
 
 
@@ -106,8 +103,6 @@ end
 function ENT:GenerateMeshFromEntities()
 
 	local newMesh = {}
-	-- print("GENERATING MESH FOR" .. tostring(self))
-	-- PrintTable(self.Children)
 
 	if not self.Children then print("NO CHILDREN!") end
 
@@ -223,13 +218,12 @@ function ENT:OnDuplicated( entTable ) end
 	duplication table should be also stored on that prop_physics, not on prop_physics_my. 
 ]]--
 function ENT:PreEntityCopy()
-	-- print("[STATE] INIT PreEntityCopy on" .. tostring(self));
+
 	if CLIENT then return end
 	local info = {}
 
 	info.Children = {}
 
-	printPoseAll("PreEntityCopy_Start", self.Children, self)
 
 	for id, ch in pairs(self.Children) do
 
@@ -252,7 +246,6 @@ function ENT:PreEntityCopy()
 
 	info.Frozen = not self:GetPhysicsObject():IsMoveable()
 
-	printPoseAll("PreEntityCopy_End", info.Children, self)
 
 	duplicator.StoreEntityModifier(self, "SuperGlue", info)
 end
@@ -271,31 +264,17 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 
 	if ent.EntityMods and ent.EntityMods.SuperGlue then
 
-		printPoseAll("PostEntityPaste_Start", ent.EntityMods.SuperGlue.Children, self)
-
 		local entList = {}
 
 		for id, v in pairs(ent.EntityMods.SuperGlue.Children) do
 			local prop = ents.Create(v.Class)
-			-- local prop = ents.Create("gmod_childtest") -- This eventually needs to be v.Class, this is for debugging
 			prop:SetModel(v.Model)
 			prop:SetParent(ent)
 
-			local pos = Vector(v.Pos.x, v.Pos.y, v.Pos.z)
-			-- pos:Rotate(v.Ang)
+			prop:SetLocalPos(Vector(v.Pos.x, v.Pos.y, v.Pos.z))
+			prop:SetLocalAngles(v.Ang)
 
-			prop:SetLocalPos(pos)
-			-- prop:SetPos(Vector(0,0,0))
-
-			-- prop:SetAngles(v.Ang + self:GetAngles())
-			prop:SetLocalAngles(v.Ang) -- TODO TRYING TO FIGURE OUT HOW TO  MAKE !!ONLY PROPS!! GO TO RIGHT PLACE 
-
-			prop:SetNWAngle( "localAng", v.Ang )
 			prop:Spawn()
-
-			net.Start("vomit")
-			net.WriteInt(prop:EntIndex(), 32)
-			net.Broadcast()
 
 			prop:SetMaterial(v.Mat)
 			prop:SetSkin(v.Skin)
@@ -303,21 +282,9 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 			self.Children[id] = prop
 		end
 
-		printPoseAll("PostEntityPaste_PreGeneration", self.Children, self)
-
-		-- PrintTable(self.Children)
-
 		self.cloned = true
 		self:Spawn()
-		for id, child in pairs(self.Children) do
-			print(tostring(child) .. " SERANG:  " .. tostring(child:GetAngles()))
-		end
 
-		printPoseAll("PostEntityPaste_End", self.Children, self)
-
-		if ent.EntityMods.SuperGlue.Frozen then
-			-- ent:GetPhysicsObject():EnableMotion(false)
-		end
 	end
 	printCSV()
 end
