@@ -22,6 +22,7 @@ TODO
 
 util.AddNetworkString( "ReqInitSwitching" )
 util.PrecacheModel("models/hunter/blocks/cube05x05x05.mdl")
+util.AddNetworkString( "vomit" )
 
 CreateConVar("max_tableActive", "false")
 
@@ -40,11 +41,9 @@ function ENT:Initialize()
 
 		if CLIENT then return end
 		self.Children = self.Children or {}
-		-- print("Initializing " .. self:EntIndex())
 
 		if not self.cloned then self.cloned = false end
 
-		printSinglePose("Initialize_Start", "Self", self)
 		self:SetModel(modelPath)
 
 		-- Verify that network strings are pooled, regardless of load order (client then server or vise-versa)
@@ -56,7 +55,6 @@ function ENT:Initialize()
 		else
 			self:GenerateClonedMeshFromEntities()
 		end
-
 		self:PhysicsDestroy()
 		self:PhysicsFromMesh(self.Mesh)
 
@@ -87,7 +85,6 @@ function ENT:Initialize()
 
 		self:PhysWake()
 		printPoseAll("Initialize_End", self.Children, self)
-
 end
 
 
@@ -119,7 +116,6 @@ function ENT:GenerateMeshFromEntities()
 		local childPhys = childEnt:GetPhysicsObject()
 		local delta = childEnt:GetPos() - self:GetPos()
 		local angle = self.angTable[_]
-		-- print("error = " .. tostring(angle - self.angTable[_]))
 		local physMesh = childPhys:GetMesh()
 
 		for i, vert in pairs(physMesh) do
@@ -132,6 +128,30 @@ function ENT:GenerateMeshFromEntities()
 	end
 	self.Mesh = newMesh
 end
+
+
+function ENT:GenerateClonedMeshFromEntities()
+	local newMesh = {}
+
+	if not self.Children then print("NO CHILDREN!") end
+
+	-- For each entity in the selected entities list
+	for _, childEnt in pairs(self.Children) do
+		local childPhys = childEnt:GetPhysicsObject()
+		local physMesh = childPhys:GetMesh()
+		local delta = childEnt:GetLocalPos()
+		local angle = childEnt:GetLocalAngles()
+		for i, vert in pairs(physMesh) do
+			local vec = vert["pos"]
+			vec:Rotate(angle)
+			vec = vec + delta
+
+			table.insert(newMesh, vec)
+		end
+	end
+	self.Mesh = newMesh
+end
+
 
 --[[
 	Name: CalculateMassInformation
@@ -165,22 +185,35 @@ function ENT:CalculateMassInformation()
 
 	return massSum, COM_Pos_Calc
 end
-
-
 --[[
    Name: Think
 ]]--
-function ENT:Think()
-	if CLIENT then return end
-end
-
-function ENT:OnRemove()
-	print("RESETTING TABLE")
-	resetTable()
-end
+function ENT:Think() if CLIENT then return end end
+function ENT:OnRemove() resetTable() end
 
 
 -- COPY ORDER: PreEntityCopy, PostEntityCopy, OnEntityCopyTableFinish 
+
+--[[
+	Name: PostEntityCopy
+	Called after the duplicator finished copying the entity. See also ENTITY:PreEntityCopy and ENTITY:PostEntityPaste. 
+]]--
+function ENT:PostEntityCopy() end
+--[[
+   Name: OnEntityCopyTableFinish
+   Called after duplicator finishes saving the entity, allowing you to modify the save data. 
+   This is called after ENTITY:PostEntityCopy. 
+]]--
+function ENT:OnEntityCopyTableFinish( tableData ) end
+--[[
+	Name: OnDuplicated
+	Called on any entity after it has been created by the duplicator and before any bone/entity modifiers have been applied.
+	This hook is called after ENTITY:Initialize and before ENTITY:PostEntityPaste.
+
+	When this state is reached:
+]]--
+function ENT:OnDuplicated( entTable ) end
+
 
 --[[
 	Name: PreEntityCopy
@@ -203,9 +236,8 @@ function ENT:PreEntityCopy()
 		local child = {}
 		child.Class = ch:GetClass()
 		child.Model = ch:GetModel()
-		child.Pos = self.posTable[id]
-		child.Ang = self.angTable[id]
-		print(tostring(ch) .. "@PreEntityCopy  |  POS: " .. tostring(child.Pos) .. "  |  ANG: " .. tostring(child.Ang))
+		child.Pos = ch:GetLocalPos()
+		child.Ang = ch:GetLocalAngles()
 		child.Mat = ch:GetMaterial()
 		child.Skin = ch:GetSkin()
 
@@ -215,72 +247,15 @@ function ENT:PreEntityCopy()
 
 	info.Mass = self.Mass
 
+	info.Pos = self:GetPos()
+	info.Ang = self:GetAngles()
+
 	info.Frozen = not self:GetPhysicsObject():IsMoveable()
 
 	printPoseAll("PreEntityCopy_End", info.Children, self)
 
 	duplicator.StoreEntityModifier(self, "SuperGlue", info)
 end
-
-
---[[
-	Name: PostEntityCopy
-	Called after the duplicator finished copying the entity. See also ENTITY:PreEntityCopy and ENTITY:PostEntityPaste. 
-]]--
-function ENT:PostEntityCopy()
-end
-
-
---[[
-   Name: OnEntityCopyTableFinish
-   Called after duplicator finishes saving the entity, allowing you to modify the save data. 
-   This is called after ENTITY:PostEntityCopy. 
-]]--
-function ENT:OnEntityCopyTableFinish( tableData )
-end
-
-
-
-
--- DUPLICATION (PASTE) ORDER: Initialize, OnDuplicated, PostEntityPaste
-
---[[
-	Name: OnDuplicated
-	Called on any entity after it has been created by the duplicator and before any bone/entity modifiers have been applied.
-	This hook is called after ENTITY:Initialize and before ENTITY:PostEntityPaste.
-
-	When this state is reached:
-]]--
-function ENT:OnDuplicated( entTable )
-end
-
-
-
-function ENT:GenerateClonedMeshFromEntities()
-	local newMesh = {}
-	-- print("GENERATING MESH FOR" .. tostring(self))
-	-- PrintTable(self.Children)
-
-	if not self.Children then print("NO CHILDREN!") end
-
-	-- For each entity in the selected entities list
-	for _, childEnt in pairs(self.Children) do
-		local childPhys = childEnt:GetPhysicsObject()
-		local physMesh = childPhys:GetMesh()
-		local delta = childEnt:GetPos() - self:GetPos()
-		local angle = childEnt:GetAngles()
-		print(tostring(ch) .. "@GenPhysMesh  |  POS: " .. tostring(childEnt:GetPos()) .. "  |  ANG: " .. tostring(childEnt:GetAngles()))
-		for i, vert in pairs(physMesh) do
-			local vec = vert["pos"]
-			vec:Rotate(angle)
-			vec = vec + delta
-
-			table.insert(newMesh, vec)
-		end
-	end
-	self.Mesh = newMesh
-end
-
 
 --[[
 	Name: PostEntityPaste
@@ -294,8 +269,6 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 
 	self.Children = {}
 
-	-- print("[STATE] INIT PostEntityPaste on" .. tostring(self));
-	if CLIENT then return end
 	if ent.EntityMods and ent.EntityMods.SuperGlue then
 
 		printPoseAll("PostEntityPaste_Start", ent.EntityMods.SuperGlue.Children, self)
@@ -304,26 +277,29 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 
 		for id, v in pairs(ent.EntityMods.SuperGlue.Children) do
 			local prop = ents.Create(v.Class)
-			print(tostring(ch) .. "@PostEntityPaste Start |  POS: " .. tostring(v.Pos) .. "  |  ANG: " .. tostring(v.Ang))
+			-- local prop = ents.Create("gmod_childtest") -- This eventually needs to be v.Class, this is for debugging
 			prop:SetModel(v.Model)
+			prop:SetParent(ent)
 
 			local pos = Vector(v.Pos.x, v.Pos.y, v.Pos.z)
 			-- pos:Rotate(v.Ang)
 
-			prop:SetPos(pos)
+			prop:SetLocalPos(pos)
 			-- prop:SetPos(Vector(0,0,0))
 
 			-- prop:SetAngles(v.Ang + self:GetAngles())
-			prop:SetAngles(v.Ang)
+			prop:SetLocalAngles(v.Ang) -- TODO TRYING TO FIGURE OUT HOW TO  MAKE !!ONLY PROPS!! GO TO RIGHT PLACE 
 
-			prop:SetParent(ent)
+			prop:SetNWAngle( "localAng", v.Ang )
 			prop:Spawn()
+
+			net.Start("vomit")
+			net.WriteInt(prop:EntIndex(), 32)
+			net.Broadcast()
 
 			prop:SetMaterial(v.Mat)
 			prop:SetSkin(v.Skin)
 
-
-			print(tostring(ch) .. "@PostEntityPaste End |  POS: " .. tostring(prop:GetPos()) .. "  |  ANG: " .. tostring(prop:GetAngles()))
 			self.Children[id] = prop
 		end
 
@@ -333,11 +309,14 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 
 		self.cloned = true
 		self:Spawn()
+		for id, child in pairs(self.Children) do
+			print(tostring(child) .. " SERANG:  " .. tostring(child:GetAngles()))
+		end
 
 		printPoseAll("PostEntityPaste_End", self.Children, self)
 
 		if ent.EntityMods.SuperGlue.Frozen then
-			ent:GetPhysicsObject():EnableMotion(false)
+			-- ent:GetPhysicsObject():EnableMotion(false)
 		end
 	end
 	printCSV()
