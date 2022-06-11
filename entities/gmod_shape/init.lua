@@ -88,15 +88,10 @@ function ENT:Initialize()
 			-- DEBUGGER: Writes PhysMesh to table and sends to client for rendering.
 			print("GOT AUTOGEN CENTER OF MASS: " .. tostring(phys:GetMassCenter()))
 
-			local mins = self:OBBMins()
-			local maxs = self:OBBMaxs()
-
 			net.Receive("RequestPhysMesh" .. self:EntIndex(), function(len, ply)
 				local physMesh = phys:GetMesh()
 				net.Start("SendPhysMesh" .. self:EntIndex())
 				net.WriteTable(physMesh)
-				net.WriteVector(mins)
-				net.WriteVector(maxs)
 				net.Broadcast()
 			end )
 			-- /DEBUGGER

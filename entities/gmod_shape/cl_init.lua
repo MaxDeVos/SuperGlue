@@ -9,7 +9,7 @@ function ENT:Initialize()
 	-- DEBUGGER: Handles recieving of PhysMesh for wireframe drawing. Yep, that's right, this 
 	--           entire file exists nearly exclusively for debugging. Such is life.
 	if SERVER then return end
-
+	
 	net.Start("ReqInitSwitching")
 	net.WriteInt(self:EntIndex(), 32)
 	net.SendToServer()
@@ -24,9 +24,6 @@ function ENT:Initialize()
 	net.Receive(recieveString, function(len, ply)
 		self.meshTable = net.ReadTable()
 		self:BuildMeshFromTable()
-		local mins = net.ReadVector()
-		local maxs = net.ReadVector()
-		self:SetRenderBounds(mins, maxs)
 	end )
 
 	local phys = self:GetPhysicsObject()
@@ -35,6 +32,11 @@ function ENT:Initialize()
 		phys:EnableCollisions(false)
 	end
 	-- /DEBUGGER
+
+	local mins = self:OBBMins()
+	local maxs = self:OBBMaxs()
+	self:SetRenderBounds(mins, maxs)
+
 end
 
 
