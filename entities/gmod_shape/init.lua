@@ -13,8 +13,8 @@ Good luck.
 -Max
 
 TODO
-• Center of Mass
-• Saving
+• Fix weird child-prop duplication when loading a save
+• Center of Mass (maybe?)
 • Shadows
 • Constraints
 
@@ -22,7 +22,10 @@ DONE
 • Mesh Debugger (client wireframe renderer)
 • Mesh Generation
 • Entity fitting/updating
+• Collision Bounds
+• Render Bounds
 • Duplication
+• Singleplayer saving (bugged, see TODO)
 ]]--
 
 AddCSLuaFile("cl_init.lua")
@@ -83,10 +86,17 @@ function ENT:Initialize()
 		if phys:IsValid() then
 
 			-- DEBUGGER: Writes PhysMesh to table and sends to client for rendering.
+			print("GOT AUTOGEN CENTER OF MASS: " .. tostring(phys:GetMassCenter()))
+
+			local mins = self:OBBMins()
+			local maxs = self:OBBMaxs()
+
 			net.Receive("RequestPhysMesh" .. self:EntIndex(), function(len, ply)
 				local physMesh = phys:GetMesh()
 				net.Start("SendPhysMesh" .. self:EntIndex())
 				net.WriteTable(physMesh)
+				net.WriteVector(mins)
+				net.WriteVector(maxs)
 				net.Broadcast()
 			end )
 			-- /DEBUGGER
@@ -202,7 +212,7 @@ function ENT:GenerateClonedMeshFromEntities()
 end
 
 
-function ENT:OnRemove() resetTable() end
+function ENT:OnRemove() end
 
 
 -- COPY ORDER: PreEntityCopy, PostEntityCopy, OnEntityCopyTableFinish 
@@ -260,7 +270,6 @@ end
 	• "ent", the parent object to be duplicated, has run PreEntityCopy().
 ]]--
 function ENT:PostEntityPaste(ply, ent, createdEnts)
-
 	self.Children = {}
 
 	if ent.EntityMods and ent.EntityMods.SuperGlue then
@@ -287,9 +296,7 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 		self:Spawn() -- "Respawn" object now that the children exist.
 
 	end
-	printCSV()
 end
-
 
 --[[
 	Name: PostEntityCopy
