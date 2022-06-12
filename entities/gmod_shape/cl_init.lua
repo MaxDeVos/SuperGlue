@@ -9,7 +9,7 @@ function ENT:Initialize()
 	-- DEBUGGER: Handles recieving of PhysMesh for wireframe drawing. Yep, that's right, this 
 	--           entire file exists nearly exclusively for debugging. Such is life.
 	if SERVER then return end
-	
+
 	net.Start("ReqInitSwitching")
 	net.WriteInt(self:EntIndex(), 32)
 	net.SendToServer()

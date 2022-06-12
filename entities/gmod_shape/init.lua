@@ -13,7 +13,6 @@ Good luck.
 -Max
 
 TODO
-• Fix weird child-prop duplication when loading a save
 • Center of Mass (maybe?)
 • Shadows
 • Constraints
@@ -25,7 +24,7 @@ DONE
 • Collision Bounds
 • Render Bounds
 • Duplication
-• Singleplayer saving (bugged, see TODO)
+• Singleplayer saving (I'm sure there's a problem with it)
 ]]--
 
 AddCSLuaFile("cl_init.lua")
@@ -54,6 +53,7 @@ function ENT:Initialize()
 
 		if CLIENT then return end
 		self.Children = self.Children or {}
+		self.deepChildren = self.deepChildren or {}
 
 		if not self.cloned then self.cloned = false end
 
@@ -76,6 +76,8 @@ function ENT:Initialize()
 
 		for _, child in pairs(self.Children) do
 			child:SetParent(self)
+			self:DeleteOnRemove(child)
+			self.deepChildren[child:EntIndex()] = child
 		end
 
 		self:SetSolid(SOLID_VPHYSICS)
@@ -219,6 +221,12 @@ function ENT:OnRemove() end
 ]]--
 function ENT:PreEntityCopy()
 
+	print("========= DEEP CHILDREN ============")
+	for a, b in pairs(self.deepChildren) do
+		print(tostring(a) .. "   " .. tostring(b))
+	end
+	print("=====================")
+
 	if CLIENT then return end
 	local entData = {}
 
@@ -246,6 +254,12 @@ function ENT:PreEntityCopy()
 	entData.Pos = self:GetPos()
 	entData.Ang = self:GetAngles()
 
+	local deepChildren = {}
+	for id, ch in pairs(self.deepChildren) do
+		deepChildren[id] = tostring(ch)
+	end
+	entData.DeepChildren = deepChildren
+
 	entData.Frozen = not self:GetPhysicsObject():IsMoveable()
 
 
@@ -265,6 +279,28 @@ end
 	• "ent", the parent object to be duplicated, has run PreEntityCopy().
 ]]--
 function ENT:PostEntityPaste(ply, ent, createdEnts)
+
+	for id, oldEnt in pairs(ent.EntityMods.SuperGlue.DeepChildren) do
+		print("DEEP CHILD: " .. tostring(id) .. "  " .. tostring(oldEnt))
+		if createdEnts then
+			if createdEnts[id] then 
+				if(createdEnts[id]:Remove()) then
+					print("REMOVED DEEP CHILD COPY!")
+				end
+			end
+		end
+	end
+
+	-- for oldEntID, newEnt in pairs(createdEnts) do
+	-- 	print("OLD CHILD WITH ID: " .. tostring(oldEntID) .. "   " .. tostring(newEnt))
+	-- 	-- for id, oldEnt in pairs(ent.EntityMods.SuperGlue.DeepChildren) do
+	-- 	-- 	if oldEntId == id then
+	-- 	-- 		newEnt:Remove()
+	-- 	-- 		print("WE GOT EM")
+	-- 	-- 	end
+	-- 	-- end
+	-- end
+
 	self.Children = {}
 
 	if ent.EntityMods and ent.EntityMods.SuperGlue then
@@ -272,7 +308,6 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 		for id, entData in pairs(ent.EntityMods.SuperGlue.Children) do
 			local newChild = ents.Create(entData.Class)
 			newChild:SetModel(entData.Model)
-
 			-- We define the parent first so we can take advantage of LocalPos and LocalAngles, allowing us
 			-- to completely isolate ourselves from those scary World coordinates (i am very bad at math)
 			newChild:SetParent(ent)
@@ -284,12 +319,14 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 			newChild:SetMaterial(entData.Mat)
 			newChild:SetSkin(entData.Skin)
 
+			print(tostring(self) .. "NEW CHILD PASTED: " .. tostring(newChild))
+
 			self.Children[id] = newChild
 		end
 
 		self.cloned = true
 		self:Spawn() -- "Respawn" object now that the children exist.
-
+		-- PrintTable(self:GetSaveTable( true ))
 	end
 end
 
