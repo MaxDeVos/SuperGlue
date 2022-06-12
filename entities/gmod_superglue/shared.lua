@@ -23,14 +23,14 @@ modelPath = "models/hunter/blocks/cube025x025x025.mdl"
 
 -- Don't allow children in a superglue group to move independently of their parent
 hook.Add("PhysgunPickup", "ChildrenRule", function(ply, ent)
-	if ent:GetParent() and ent:GetParent():IsValid() and ent:GetParent():GetClass() == "gmod_shape" then
+	if ent:GetParent() and ent:GetParent():IsValid() and ent:GetParent():GetClass() == "gmod_superglue" then
 		return false
 	end
 end)
 
 -- honestly I stole this directly from somewhere, I'm not really sure why it's here
 hook.Add("CanTool","No Toolgun on polys",function( ply, tr, tool )
-	if ( IsValid( tr.Entity ) and tr.Entity:GetParent() and tr.Entity:GetParent():IsValid() and tr.Entity:GetParent():GetClass() == "gmod_shape" ) then
+	if ( IsValid( tr.Entity ) and tr.Entity:GetParent() and tr.Entity:GetParent():IsValid() and tr.Entity:GetParent():GetClass() == "gmod_superglue" ) then
 		return false
 	end
 end)

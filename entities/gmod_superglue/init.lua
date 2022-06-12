@@ -287,7 +287,6 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 	PrintTable(createdEnts)
 
 	for id, oldEnt in pairs(ent.EntityMods.SuperGlue.DeepChildren) do
-		-- print("DEEP CHILD: " .. tostring(id) .. "  " .. tostring(oldEnt))
 		if createdEnts and createdEnts[id] then
 			createdEnts[id]:Remove()
 		end
@@ -299,8 +298,6 @@ function ENT:PostEntityPaste(ply, ent, createdEnts)
 
 		for id, entData in pairs(ent.EntityMods.SuperGlue.Children) do
 			local newChild = duplicator.CreateEntityFromTable(ply, entData)
-			-- We define the parent first so we can take advantage of LocalPos and LocalAngles, allowing us
-			-- to completely isolate ourselves from those scary World coordinates (i am very bad at math)
 			newChild:SetParent(ent)
 			newChild:Spawn()
 			self.Children[id] = newChild

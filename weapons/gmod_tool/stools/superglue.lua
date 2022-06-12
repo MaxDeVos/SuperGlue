@@ -1,12 +1,12 @@
 TOOL.Category		= "Constraints"
-TOOL.Name			= "#tool.myshape.name"
+TOOL.Name			= "#tool.superglue.name"
 TOOL.Command		= nil
 TOOL.ConfigName		= nil
 
 include("luaUtilities.lua")
 if CLIENT then
-	language.Add("tool.myshape.name", "Shape Maker")
-	language.Add("tool.myshape.desc", "Make Shape")
+	language.Add("tool.superglue.name", "SuperGlue")
+	language.Add("tool.superglue.desc", "Rigidly Join Objects")
 end
 
 selectedEnts = {}
@@ -59,7 +59,7 @@ function TOOL:RightClick( trace )
 		return true
 	end
 
-	local ent = ents.Create("gmod_shape")
+	local ent = ents.Create("gmod_superglue")
 	ent:SetModel("models/hunter/blocks/cube025x025x025.mdl")
 
 	ent:ConfigureChildren(cleanedTable)
