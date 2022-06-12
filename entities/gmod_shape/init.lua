@@ -88,7 +88,7 @@ function ENT:Initialize()
 		if phys:IsValid() then
 
 			-- DEBUGGER: Writes PhysMesh to table and sends to client for rendering.
-			print("GOT AUTOGEN CENTER OF MASS: " .. tostring(phys:GetMassCenter()))
+			-- print("GOT AUTOGEN CENTER OF MASS: " .. tostring(phys:GetMassCenter()))
 
 			net.Receive("RequestPhysMesh" .. self:EntIndex(), function(len, ply)
 				local physMesh = phys:GetMesh()
@@ -102,7 +102,8 @@ function ENT:Initialize()
 		end
 
 		self:PhysWake()
-end
+
+	end
 
 
 --[[
@@ -221,11 +222,11 @@ function ENT:OnRemove() end
 ]]--
 function ENT:PreEntityCopy()
 
-	print("========= DEEP CHILDREN ============")
-	for a, b in pairs(self.deepChildren) do
-		print(tostring(a) .. "   " .. tostring(b))
-	end
-	print("=====================")
+	-- print("========= DEEP CHILDREN ============")
+	-- for a, b in pairs(self.deepChildren) do
+	-- 	print(tostring(a) .. "   " .. tostring(b))
+	-- end
+	-- print("=====================")
 
 	if CLIENT then return end
 	local entData = {}
@@ -233,17 +234,19 @@ function ENT:PreEntityCopy()
 	entData.Children = {}
 
 
-	for id, ch in pairs(self.Children) do
+	for id, ch in pairs(self.deepChildren) do
 
-		local child = {}
-		child.Class = ch:GetClass()
-		child.Model = ch:GetModel()
-		child.Pos = ch:GetLocalPos()
-		child.Ang = ch:GetLocalAngles()
-		child.Mat = ch:GetMaterial()
-		child.Skin = ch:GetSkin()
+		entData.Children[id] = duplicator.CopyEntTable(ch)
 
-		entData.Children[id] = child
+		-- local child = {}
+		-- child.Class = ch:GetClass()
+		-- child.Model = ch:GetModel()
+		-- child.Pos = ch:GetLocalPos()
+		-- child.Ang = ch:GetLocalAngles()
+		-- child.Mat = ch:GetMaterial()
+		-- child.Skin = ch:GetSkin()
+
+		-- entData.Children[id] = child
 
 	end
 
@@ -280,53 +283,30 @@ end
 ]]--
 function ENT:PostEntityPaste(ply, ent, createdEnts)
 
+	print("=========== createdEnts ===============")
+	PrintTable(createdEnts)
+
 	for id, oldEnt in pairs(ent.EntityMods.SuperGlue.DeepChildren) do
-		print("DEEP CHILD: " .. tostring(id) .. "  " .. tostring(oldEnt))
-		if createdEnts then
-			if createdEnts[id] then 
-				if(createdEnts[id]:Remove()) then
-					print("REMOVED DEEP CHILD COPY!")
-				end
-			end
+		-- print("DEEP CHILD: " .. tostring(id) .. "  " .. tostring(oldEnt))
+		if createdEnts and createdEnts[id] then
+			createdEnts[id]:Remove()
 		end
 	end
-
-	-- for oldEntID, newEnt in pairs(createdEnts) do
-	-- 	print("OLD CHILD WITH ID: " .. tostring(oldEntID) .. "   " .. tostring(newEnt))
-	-- 	-- for id, oldEnt in pairs(ent.EntityMods.SuperGlue.DeepChildren) do
-	-- 	-- 	if oldEntId == id then
-	-- 	-- 		newEnt:Remove()
-	-- 	-- 		print("WE GOT EM")
-	-- 	-- 	end
-	-- 	-- end
-	-- end
 
 	self.Children = {}
 
 	if ent.EntityMods and ent.EntityMods.SuperGlue then
 
 		for id, entData in pairs(ent.EntityMods.SuperGlue.Children) do
-			local newChild = ents.Create(entData.Class)
-			newChild:SetModel(entData.Model)
+			local newChild = duplicator.CreateEntityFromTable(ply, entData)
 			-- We define the parent first so we can take advantage of LocalPos and LocalAngles, allowing us
 			-- to completely isolate ourselves from those scary World coordinates (i am very bad at math)
 			newChild:SetParent(ent)
-			newChild:SetLocalPos(Vector(entData.Pos.x, entData.Pos.y, entData.Pos.z))
-			newChild:SetLocalAngles(entData.Ang)
-
 			newChild:Spawn()
-
-			newChild:SetMaterial(entData.Mat)
-			newChild:SetSkin(entData.Skin)
-
-			print(tostring(self) .. "NEW CHILD PASTED: " .. tostring(newChild))
-
 			self.Children[id] = newChild
 		end
-
 		self.cloned = true
 		self:Spawn() -- "Respawn" object now that the children exist.
-		-- PrintTable(self:GetSaveTable( true ))
 	end
 end
 
